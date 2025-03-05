@@ -17,6 +17,14 @@ export interface Message {
   content: string;
   sender: User;
   timestamp: string;
+  message_status?: MessageStatus[];
+}
+
+export interface MessageStatus {
+  messageid: string;
+  userid: string;
+  status: "delivered" | "read";
+  timestamp: string;
 }
 
 export interface Chat {
@@ -30,4 +38,5 @@ export interface Chat {
   messages: Message[];
   description?: string;
   labels?: Label[];
+  unreadCount?: number;
 }

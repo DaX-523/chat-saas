@@ -10,6 +10,7 @@ import type { Chat, Message, Label } from "@/lib/types";
 import { initialChats, allLabels } from "@/lib/data";
 import { currentUser } from "@/lib/data";
 import { supabase } from "@/lib/supabase";
+import useFetchChats from "@/hooks/useFetchChats";
 
 export default function ChatInterface() {
   const [chats, setChats] = useState<Chat[]>([]);
@@ -21,17 +22,15 @@ export default function ChatInterface() {
   const [selectedLabels, setSelectedLabels] = useState<Label[]>([]);
   const [showLabelFilter, setShowLabelFilter] = useState(false);
 
-  // Filter chats based on search query and selected labels
+  // Bonus implementations for the assignment (search and label filters)
   useEffect(() => {
     let result = chats;
 
-    // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       result = result.filter((chat) => chat.name.toLowerCase().includes(query));
     }
 
-    // Filter by selected labels
     if (selectedLabels.length > 0) {
       result = result.filter(
         (chat) =>
@@ -45,79 +44,41 @@ export default function ChatInterface() {
     setFilteredChats(result);
   }, [chats, searchQuery, selectedLabels]);
 
-  const fetchChats = async () => {
-    // First fetch chats with basic info
-    const chatsResponse = await supabase.from("chats").select();
-
-    if (chatsResponse.error) {
-      console.error("Error fetching chats:", chatsResponse.error);
-      return;
-    }
-
-    if (chatsResponse.data) {
-      // Fetch messages for all chats in a single query using a join
-      const messagesResponse = await supabase
-        .from("messages")
-        .select("*")
-        .in(
-          "chatid",
-          chatsResponse.data.map((chat) => chat.id)
-        );
-
-      if (messagesResponse.error) {
-        console.error("Error fetching messages:", messagesResponse.error);
-        return;
-      }
-
-      // Combine chats with their messages
-      const populatedChats = chatsResponse.data.map((chat) => ({
-        ...chat,
-        labels: chat.labels.map((label: string) => {
-          switch (label) {
-            case "Work":
-              return { id: "1", name: "Work", color: "#FF5722" };
-            case "Family":
-              return { id: "2", name: "Family", color: "#4CAF50" };
-            case "Friends":
-              return { id: "3", name: "Friends", color: "#2196F3" };
-            case "Important":
-              return { id: "4", name: "Important", color: "#F44336" };
-            case "Personal":
-              return { id: "5", name: "Personal", color: "#9C27B0" };
-          }
-        }),
-        messages:
-          messagesResponse.data?.filter((msg) => msg.chatid === chat.id) || [],
-      }));
-
-      setChats(populatedChats);
-      setFilteredChats(populatedChats);
-      setActiveChat(populatedChats[0]);
-    }
-  };
-
   useEffect(() => {
-    fetchChats();
+    const fetchData = async () => {
+      try {
+        const populatedChats = await useFetchChats();
+        if (populatedChats) {
+          setChats(populatedChats);
+          setFilteredChats(populatedChats);
+          setActiveChat(populatedChats[0]);
+        }
+      } catch (error) {
+        console.error("Error fetching chats:", error);
+      }
+    };
+
+    fetchData();
   }, []);
 
   const handleSendMessage = async (content: string) => {
     if (!content.trim() || !activeChat) return;
-
+    const msgTime = new Date()
+      .toLocaleString("en-US", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      })
+      .replace(",", "");
     const newMessage: Message = {
       id: Date.now().toString(),
       content,
       sender: currentUser,
-      timestamp: new Date()
-        .toLocaleString("en-US", {
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-          hour12: false,
-        })
-        .replace(",", ""),
+      timestamp: msgTime,
       chatid: activeChat.id,
     };
 
@@ -131,6 +92,37 @@ export default function ChatInterface() {
       return;
     }
     if (response.status === 201) {
+      const recipients = activeChat.participants.filter(
+        (p) => p.id !== currentUser.id
+      );
+
+      const messageStatusEntries = recipients.map((recipient) => ({
+        id: Date.now().toString() + recipient.id,
+
+        messageid: newMessage.id,
+        userid: recipient.id,
+        chatid: activeChat.id,
+        status: "delivered",
+        updated_at: msgTime,
+      }));
+
+      // Insert message status entries
+      const statusResponse = await supabase
+        .from("message_status")
+        .insert(messageStatusEntries);
+
+      if (statusResponse.error) {
+        console.error("Error creating message status:", statusResponse.error);
+      }
+
+      const chatUpdateResponse = await supabase
+        .from("chats")
+        .update({ lastMessage: content, lastMessageTime: msgTime })
+        .eq("id", activeChat.id);
+      console.log(chatUpdateResponse);
+      if (chatUpdateResponse.error) {
+        console.error("Error updating chat:", chatUpdateResponse.error);
+      }
       const updatedChats = chats.map((chat) => {
         if (chat.id === activeChat.id) {
           return {
@@ -172,35 +164,72 @@ export default function ChatInterface() {
     setSelectedLabels([]);
   };
 
-  const addLabelToChat = (chat: Chat, label: Label) => {
-    const updatedChats = chats.map((c) => {
-      if (c.id === chat.id) {
-        const existingLabels = c.labels || [];
-        if (!existingLabels.some((l) => l.id === label.id)) {
-          return {
-            ...c,
-            labels: [...existingLabels, label],
-          };
+  const addLabelToChat = async (chat: Chat, label: Label) => {
+    // console.log(chat, label);
+    chat.labels?.push(label);
+    const updatedLabels = chat?.labels?.map((label) => label.name);
+    const response = await supabase
+      .from("chats")
+      .update({
+        labels: updatedLabels,
+      })
+      .eq("id", chat.id);
+    if (response.error) {
+      console.error("Error adding label");
+      return;
+    }
+    // console.log(response);
+    if (response.status === 204) {
+      const updatedChats = chats.map((c) => {
+        if (c.id === chat.id) {
+          const existingLabels = c.labels || [];
+          if (!existingLabels.some((l) => l.id === label.id)) {
+            return {
+              ...c,
+              labels: [...existingLabels, label],
+            };
+          }
         }
-      }
-      return c;
-    });
+        return c;
+      });
 
-    setChats(updatedChats);
+      setChats(updatedChats);
+    }
   };
 
-  const removeLabelFromChat = (chat: Chat, labelId: string) => {
-    const updatedChats = chats.map((c) => {
-      if (c.id === chat.id && c.labels) {
-        return {
-          ...c,
-          labels: c.labels.filter((l) => l.id !== labelId),
-        };
-      }
-      return c;
-    });
+  const removeLabelFromChat = async (chat: Chat, labelId: string) => {
+    const labelToRemove = allLabels.find((l) => l.id === labelId)?.name;
+    if (!labelToRemove) return;
 
-    setChats(updatedChats);
+    // Update the database using array_remove
+    const updatedLabels = (chat.labels?.map((l) => l.name) || []).filter(
+      (name) => name !== labelToRemove
+    );
+
+    const response = await supabase
+      .from("chats")
+      .update({
+        labels: updatedLabels,
+      })
+      .eq("id", chat.id);
+
+    if (response.error) {
+      console.error("Error removing label:", response.error);
+      return;
+    }
+    if (response.status === 204) {
+      const updatedChats = chats.map((c) => {
+        if (c.id === chat.id && c.labels) {
+          return {
+            ...c,
+            labels: c.labels.filter((l) => l.id !== labelId),
+          };
+        }
+        return c;
+      });
+
+      setChats(updatedChats);
+    }
   };
 
   const sidebarContent = (
@@ -209,7 +238,7 @@ export default function ChatInterface() {
         <div className="flex items-center space-x-4">
           <div className="w-10 h-10 rounded-full bg-gray-300 overflow-hidden">
             <img
-              src={currentUser.avatar || "/placeholder.svg"}
+              src={activeChat?.isGroup ? "default-group.png" : "/user-img.png"}
               alt="Profile"
               className="w-full h-full object-cover"
             />
@@ -401,6 +430,8 @@ export default function ChatInterface() {
           setActiveChat(chat);
           setShowGroupInfo(false);
         }}
+        setChats={setChats}
+        setFilteredChats={setFilteredChats}
         onAddLabel={addLabelToChat}
         onRemoveLabel={removeLabelFromChat}
         allLabels={allLabels}

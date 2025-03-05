@@ -1,3 +1,4 @@
+// this file is for initial dummy data
 import type { Chat, User, Label } from "./types";
 
 // Sample labels
@@ -61,17 +62,23 @@ export const users: User[] = [
     avatar: "/placeholder.svg?height=48&width=48",
     isOnline: false,
   },
+  {
+    id: "6",
+    name: "Daksh Dhama",
+    avatar: "/placeholder.svg?height=48&width=48",
+    isOnline: false,
+  },
 ];
 
 // Current user
-export const currentUser = users[0];
+export const currentUser = users[5];
 
 export const initialChats: Chat[] = [
   {
     id: "1",
     name: "Test El Centro",
     avatar: "/placeholder.svg?height=48&width=48",
-    lastMessage: "Hello, Livnot!",
+    lastMessage: "Hello, ",
     lastMessageTime: "2023-05-03T10:30:00",
     isGroup: false,
     participants: [users[0], users[1]],
@@ -86,7 +93,7 @@ export const initialChats: Chat[] = [
       },
       {
         id: "102",
-        content: "Hello, Livnot!",
+        content: "",
         sender: users[1],
         chatid: "2",
         timestamp: "2023-05-03T10:30:00",

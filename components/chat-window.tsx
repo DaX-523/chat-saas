@@ -53,7 +53,7 @@ export default function ChatWindow({
         <div className="flex items-center">
           <div className="w-10 h-10 rounded-full bg-gray-300 overflow-hidden mr-3">
             <img
-              src={chat.avatar || `/placeholder.svg?height=40&width=40`}
+              src={chat.isGroup ? "/default-group.png" : "/user-img.png"}
               alt={chat.name}
               className="w-full h-full object-cover"
             />
@@ -153,10 +153,7 @@ export default function ChatWindow({
               {group[0].sender.id !== currentUser.id && (
                 <div className="w-8 h-8 rounded-full bg-gray-300 overflow-hidden mr-2 flex-shrink-0">
                   <img
-                    src={
-                      group[0].sender.avatar ||
-                      `/placeholder.svg?height=32&width=32`
-                    }
+                    src={"/user-img.png"}
                     alt={group[0].sender.name}
                     className="w-full h-full object-cover"
                   />
@@ -187,12 +184,44 @@ export default function ChatWindow({
                     }`}
                   >
                     <p className="text-sm">{message.content}</p>
-                    <time
-                      className={`text-[10px] text-gray-500 text-right mt-1`}
-                      dateTime={message.timestamp}
-                    >
-                      {formatTime(message.timestamp)}
-                    </time>
+                    <div className="flex items-center justify-end gap-1 mt-1">
+                      <time
+                        className="text-[10px] text-gray-500"
+                        dateTime={message.timestamp}
+                      >
+                        {formatTime(message.timestamp)}
+                      </time>
+                      {message.sender.id === currentUser.id && (
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className={`${
+                            message.message_status?.some(
+                              (status) =>
+                                status.userid !== currentUser.id &&
+                                status.status === "read"
+                            )
+                              ? "stroke-[#53bdeb]" // Blue ticks for read
+                              : message.message_status?.some(
+                                  (status) =>
+                                    status.userid !== currentUser.id &&
+                                    status.status === "delivered"
+                                )
+                              ? "stroke-gray-500" // Gray ticks for delivered
+                              : "stroke-gray-300" // Light gray for sent
+                          }`}
+                        >
+                          <path d="m1 13 4 4L15 7" />
+                          <path d="m8 13 4 4L22 7" />
+                        </svg>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

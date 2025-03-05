@@ -5,6 +5,8 @@ import type React from "react";
 import { useState } from "react";
 import type { Chat, Label } from "@/lib/types";
 import { formatTime } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
+import { currentUser } from "@/lib/data";
 
 interface ChatListProps {
   chats: Chat[];
@@ -13,6 +15,8 @@ interface ChatListProps {
   onAddLabel: (chat: Chat, label: Label) => void;
   onRemoveLabel: (chat: Chat, labelId: string) => void;
   allLabels: Label[];
+  setChats: (chats: Chat[]) => void;
+  setFilteredChats: (chats: Chat[]) => void;
 }
 
 export default function ChatList({
@@ -22,6 +26,8 @@ export default function ChatList({
   onAddLabel,
   onRemoveLabel,
   allLabels,
+  setChats,
+  setFilteredChats,
 }: ChatListProps) {
   const [contextMenu, setContextMenu] = useState<{
     visible: boolean;
@@ -62,11 +68,36 @@ export default function ChatList({
     closeContextMenu();
   };
 
-  // Close context menu when clicking outside
   const handleOutsideClick = () => {
     if (contextMenu.visible) {
       closeContextMenu();
     }
+  };
+
+  const markMessagesAsRead = async (chat: Chat) => {
+    console.log("marking messages as read", chat);
+    if (!chat.messages.length) return;
+    const response = await supabase
+      .from("message_status")
+      .update({ status: "read", updated_at: new Date().toISOString() })
+      .eq("userid", currentUser.id)
+      .eq("status", "delivered")
+      .in(
+        "messageid",
+        chat.messages.map((m) => m.id)
+      );
+
+    if (response.error) {
+      console.error("Error marking messages as read:", response.error);
+      return;
+    }
+
+    // Update local state
+    const updatedChats = chats.map((c) =>
+      c.id === chat.id ? { ...c, unreadCount: 0 } : c
+    );
+    setChats(updatedChats);
+    setFilteredChats(updatedChats);
   };
 
   return (
@@ -86,13 +117,16 @@ export default function ChatList({
             className={`flex items-center p-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
               activeChat?.id === chat.id ? "bg-[#f0f2f5]" : ""
             }`}
-            onClick={() => onSelectChat(chat)}
+            onClick={() => {
+              onSelectChat(chat);
+              markMessagesAsRead(chat);
+            }}
             onContextMenu={(e) => handleContextMenu(e, chat)}
             aria-selected={activeChat?.id === chat.id}
           >
             <div className="w-12 h-12 rounded-full bg-gray-300 overflow-hidden mr-3 flex-shrink-0">
               <img
-                src={chat.avatar || `/placeholder.svg?height=48&width=48`}
+                src={chat.isGroup ? "/default-group.png" : "/user-img.png"}
                 alt={chat.name}
                 className="w-full h-full object-cover"
               />
@@ -121,6 +155,11 @@ export default function ChatList({
                       }: ${chat.lastMessage}`
                     : chat.lastMessage || "Start a conversation"}
                 </p>
+                {(chat.unreadCount ?? 0) > 0 && (
+                  <span className="ml-2 bg-[#25D366] text-white px-2 py-0.5 rounded-full text-xs">
+                    {chat.unreadCount}
+                  </span>
+                )}
               </div>
               {chat.labels && chat.labels.length > 0 && (
                 <div className="flex flex-wrap mt-1 gap-1">
