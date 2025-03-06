@@ -6,9 +6,8 @@ import ChatWindow from "./chat-window";
 import GroupInfo from "./group-info";
 import ResponsiveLayout from "./responsive-layout";
 import LabelFilter from "./label-filter";
-import type { Chat, Message, Label, User } from "@/lib/types";
+import type { Chat, Label, User } from "@/lib/types";
 import { allLabels } from "@/lib/data";
-import { supabase } from "@/lib/supabase";
 import { useRealtimeMessages } from "@/hooks/useRealtimeMessages";
 import UserProfileDropdown from "./user-profile-dropdown";
 import { useAuth } from "@/context/auth-context";
@@ -16,6 +15,10 @@ import { useRealtimeReadReceipts } from "@/hooks/useRealtimeReadReceipts";
 import NewChatModal from "./new-chat-modal";
 import Image from "next/image";
 import fetchChats from "@/hooks/useFetchChats";
+import { createNewChat } from "@/services/newChat";
+import { sendMessage } from "@/services/sendMessage";
+import { addLabel } from "@/services/addLabel";
+import { removeLabel } from "@/services/removeLabel";
 
 export default function ChatInterface() {
   const { authState } = useAuth();
@@ -100,108 +103,23 @@ export default function ChatInterface() {
   }, [shouldRefetch, currentUser]);
 
   const handleNewChat = async (user: User) => {
-    const newChat = {
-      id: Date.now().toString(),
-      name: user.name,
-      isGroup: false,
-      participants: [currentUser, user],
-      lastMessage: "",
-      lastMessageTime: new Date().toISOString(),
-    };
+    const response = await createNewChat(chats, user, currentUser);
+    if (response) {
+      const { updatedChats, newChat } = response;
 
-    const response = await supabase
-      .from("chats")
-      .insert({
-        ...newChat,
-        participants: [currentUser, user], // JSONB column
-      })
-      .select();
-
-    if (response.error) {
-      console.error("Error creating chat:", response.error);
-      return;
-    }
-    if (response.status === 201) {
       setShouldRefetch((prev) => !prev); // UI update
-    }
-    // Update local state
-    const updatedChats = chats.map((chat) => ({
-      ...chat,
-      messages: [],
-    }));
 
-    setChats(updatedChats);
-    setFilteredChats(updatedChats);
-    setActiveChat({ ...newChat, messages: [] }); //populated array of msgs
-    setIsModalOpen(false);
+      setChats(updatedChats);
+      setFilteredChats(updatedChats);
+      setActiveChat({ ...newChat, messages: [] }); //populated array of msgs
+      setIsModalOpen(false);
+    }
   };
 
   const handleSendMessage = async (content: string) => {
     if (!content.trim() || !activeChat) return;
-    const msgTime = new Date()
-      .toLocaleString("en-US", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: false,
-      })
-      .replace(",", "");
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      content,
-      sender: currentUser,
-      timestamp: msgTime,
-      chatid: activeChat.id,
-    };
-
-    const response = await supabase
-      .from("messages")
-      .insert(newMessage)
-      .select();
-
-    if (response.error) {
-      console.error("Error sending message:", response.error);
-      return;
-    }
-    if (response.status === 201) {
-      const recipients = activeChat.participants.filter(
-        (p) => p.id !== currentUser.id
-      );
-
-      const messageStatusEntries = recipients.map((recipient) => ({
-        id: Date.now().toString() + recipient.id,
-
-        messageid: newMessage.id,
-        userid: recipient.id,
-        chatid: activeChat.id,
-        status: "delivered",
-        updated_at: msgTime,
-      }));
-
-      // Insert message status entries for both sender and the receiver user for read receipts
-      const statusResponse = await supabase
-        .from("message_status")
-        .insert(messageStatusEntries);
-
-      if (statusResponse.error) {
-        console.error("Error creating message status:", statusResponse.error);
-        return;
-      }
-
-      const chatUpdateResponse = await supabase
-        .from("chats")
-        .update({ lastMessage: content, lastMessageTime: msgTime })
-        .eq("id", activeChat.id);
-      console.log(chatUpdateResponse);
-      if (chatUpdateResponse.error) {
-        console.error("Error updating chat:", chatUpdateResponse.error);
-      }
-
-      setInputMessage("");
-    }
+    await sendMessage(content, currentUser, activeChat);
+    setInputMessage("");
   };
 
   const toggleGroupInfo = () => {
@@ -226,66 +144,19 @@ export default function ChatInterface() {
   };
 
   const addLabelToChat = async (chat: Chat, label: Label) => {
-    chat.labels?.push(label);
-    const updatedLabels = chat?.labels?.map((label) => label.name);
-    const response = await supabase
-      .from("chats")
-      .update({
-        labels: updatedLabels,
-      })
-      .eq("id", chat.id);
-    if (response.error) {
-      console.error("Error adding label");
-      return;
-    }
-    if (response.status === 204) {
-      const updatedChats = chats.map((c) => {
-        if (c.id === chat.id) {
-          const existingLabels = c.labels || [];
-          if (!existingLabels.some((l) => l.id === label.id)) {
-            return {
-              ...c,
-              labels: [...existingLabels, label],
-            };
-          }
-        }
-        return c;
-      });
-
+    const response = await addLabel(chat, chats, label);
+    if (response) {
+      //success
+      const updatedChats = response;
       setChats(updatedChats);
     }
   };
 
   const removeLabelFromChat = async (chat: Chat, labelId: string) => {
-    const labelToRemove = allLabels.find((l) => l.id === labelId)?.name;
-    if (!labelToRemove) return;
-
-    const updatedLabels = (chat.labels?.map((l) => l.name) || []).filter(
-      (name) => name !== labelToRemove
-    );
-
-    const response = await supabase
-      .from("chats")
-      .update({
-        labels: updatedLabels,
-      })
-      .eq("id", chat.id);
-
-    if (response.error) {
-      console.error("Error removing label:", response.error);
-      return;
-    }
-    if (response.status === 204) {
-      const updatedChats = chats.map((c) => {
-        if (c.id === chat.id && c.labels) {
-          return {
-            ...c,
-            labels: c.labels.filter((l) => l.id !== labelId),
-          };
-        }
-        return c;
-      });
-
+    const response = await removeLabel(chat, chats, labelId);
+    if (response) {
+      //success
+      const updatedChats = response;
       setChats(updatedChats);
     }
   };

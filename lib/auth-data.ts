@@ -1,5 +1,5 @@
 import type { AuthUser } from "./auth-types";
-
+//dummy testing data
 // Sample authenticated users
 export const authUsers: AuthUser[] = [
   {

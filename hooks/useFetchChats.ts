@@ -39,6 +39,7 @@ const fetchChats = async (currentUser: User) => {
     console.log(messagesResponse.data);
 
     // Combine chats with their messages
+    // for tracking unread messages for users
     const populatedChats = userChats.map((chat) => {
       const chatMessages =
         messagesResponse.data?.filter((msg) => msg.chatid === chat.id) || [];

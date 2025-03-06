@@ -6,7 +6,6 @@ import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 
-// Public routes that don't require authentication
 const publicRoutes = ["/login", "/signup"];
 
 export default function RouteGuard({
@@ -38,11 +37,10 @@ export default function RouteGuard({
       }
     };
 
-    // Check auth on route change or auth state change
     authCheck();
   }, [authState.isAuthenticated, authState.isLoading, pathname, router]);
 
-  // Show loading during auth check
+  // spinner
   if (authState.isLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-gray-100">
