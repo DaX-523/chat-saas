@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { User } from "@/lib/types";
 
-const useFetchChats = async (currentUser: User) => {
+const fetchChats = async (currentUser: User) => {
   // First fetch chats with basic info
   const chatsResponse = await supabase.from("chats").select();
 
@@ -76,4 +76,4 @@ const useFetchChats = async (currentUser: User) => {
   }
 };
 
-export default useFetchChats;
+export default fetchChats;

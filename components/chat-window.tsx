@@ -4,7 +4,7 @@ import type React from "react";
 
 import type { Chat, User } from "@/lib/types";
 import { formatTime } from "@/lib/utils";
-import { useState, useRef, useEffect } from "react";
+import { useRef, useEffect } from "react";
 import Image from "next/image";
 
 interface ChatWindowProps {
@@ -25,7 +25,6 @@ export default function ChatWindow({
   currentUser,
 }: ChatWindowProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

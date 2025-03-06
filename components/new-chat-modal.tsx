@@ -46,7 +46,7 @@ const NewChatModal = ({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, []);
+  }, [setIsModalOpen]);
   return (
     // fixed positioning (covers whole screen in DOM) thats why cant be used as ref for handle click outside
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

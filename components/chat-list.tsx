@@ -6,7 +6,6 @@ import { useState } from "react";
 import type { Chat, Label } from "@/lib/types";
 import { formatTime } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
-import { currentUser } from "@/lib/data";
 import { useAuth } from "@/context/auth-context";
 import Image from "next/image";
 
@@ -132,7 +131,6 @@ export default function ChatList({
               markMessagesAsRead(chat);
             }}
             onContextMenu={(e) => handleContextMenu(e, chat)}
-            aria-selected={activeChat?.id === chat.id}
           >
             <div className="w-12 h-12 rounded-full bg-gray-300 overflow-hidden mr-3 flex-shrink-0">
               <Image

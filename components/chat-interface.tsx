@@ -1,24 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import ChatList from "./chat-list";
 import ChatWindow from "./chat-window";
 import GroupInfo from "./group-info";
 import ResponsiveLayout from "./responsive-layout";
 import LabelFilter from "./label-filter";
 import type { Chat, Message, Label, User } from "@/lib/types";
-import { initialChats, allLabels, users } from "@/lib/data";
+import { allLabels } from "@/lib/data";
 import { supabase } from "@/lib/supabase";
-import useFetchChats from "@/hooks/useFetchChats";
 import { useRealtimeMessages } from "@/hooks/useRealtimeMessages";
 import UserProfileDropdown from "./user-profile-dropdown";
 import { useAuth } from "@/context/auth-context";
 import { useRealtimeReadReceipts } from "@/hooks/useRealtimeReadReceipts";
 import NewChatModal from "./new-chat-modal";
 import Image from "next/image";
+import fetchChats from "@/hooks/useFetchChats";
 
 export default function ChatInterface() {
-  const { authState, logout } = useAuth();
+  const { authState } = useAuth();
   const [chats, setChats] = useState<Chat[]>([]);
   const [filteredChats, setFilteredChats] = useState<Chat[]>([]);
   const [activeChat, setActiveChat] = useState<Chat | null>(null);
@@ -30,13 +30,18 @@ export default function ChatInterface() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [shouldRefetch, setShouldRefetch] = useState(false);
 
-  const currentUser = authState.user || {
-    id: "user1",
-    name: "You",
-    avatar: "/placeholder.svg?height=48&width=48",
-    isOnline: true,
-    auth_id: "101",
-  };
+  // to stop unneccasry rerender on useeffect
+  const currentUser = useMemo(
+    () =>
+      authState.user || {
+        id: "user1",
+        name: "You",
+        avatar: "/placeholder.svg?height=48&width=48",
+        isOnline: true,
+        auth_id: "101",
+      },
+    [authState.user]
+  );
   // Bonus implementations for the assignment (search and label filters)
   useEffect(() => {
     let result = chats;
@@ -80,7 +85,7 @@ export default function ChatInterface() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const populatedChats = await useFetchChats(currentUser);
+        const populatedChats = await fetchChats(currentUser);
         if (populatedChats) {
           setChats(populatedChats);
           setFilteredChats(populatedChats);
