@@ -5,6 +5,7 @@ import type React from "react";
 import type { Chat, User } from "@/lib/types";
 import { formatTime } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 
 interface ChatWindowProps {
   chat: Chat;
@@ -52,14 +53,18 @@ export default function ChatWindow({
       <header className="h-16 bg-[#f0f2f5] flex items-center px-4 border-b border-gray-200">
         <div className="flex items-center">
           <div className="w-10 h-10 rounded-full bg-gray-300 overflow-hidden mr-3">
-            <img
+            <Image
+              width={500}
+              height={500}
               src={chat.isGroup ? "/default-group.png" : "/user-img.png"}
               alt={chat.name}
               className="w-full h-full object-cover"
             />
           </div>
           <div>
-            <h2 className="font-medium">{chat.name}</h2>
+            <h2 className="font-medium">
+              {chat.participants.find((p) => p.id !== currentUser.id)?.name}
+            </h2>
             <p className="text-xs text-gray-500">
               {chat.isGroup
                 ? `${chat.participants.length} participants`
@@ -70,7 +75,7 @@ export default function ChatWindow({
             </p>
           </div>
         </div>
-        <div className="ml-auto flex space-x-4">
+        <div className="ml-auto items-center flex space-x-4">
           <button
             className="text-[#54656f]"
             aria-label="Search in conversation"
@@ -152,7 +157,9 @@ export default function ChatWindow({
             >
               {group[0].sender.id !== currentUser.id && (
                 <div className="w-8 h-8 rounded-full bg-gray-300 overflow-hidden mr-2 flex-shrink-0">
-                  <img
+                  <Image
+                    width={500}
+                    height={500}
                     src={"/user-img.png"}
                     alt={group[0].sender.name}
                     className="w-full h-full object-cover"

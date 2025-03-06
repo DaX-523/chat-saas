@@ -15,6 +15,7 @@ import UserProfileDropdown from "./user-profile-dropdown";
 import { useAuth } from "@/context/auth-context";
 import { useRealtimeReadReceipts } from "@/hooks/useRealtimeReadReceipts";
 import NewChatModal from "./new-chat-modal";
+import Image from "next/image";
 
 export default function ChatInterface() {
   const { authState, logout } = useAuth();
@@ -27,6 +28,7 @@ export default function ChatInterface() {
   const [selectedLabels, setSelectedLabels] = useState<Label[]>([]);
   const [showLabelFilter, setShowLabelFilter] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [shouldRefetch, setShouldRefetch] = useState(false);
 
   const currentUser = authState.user || {
     id: "user1",
@@ -90,7 +92,7 @@ export default function ChatInterface() {
     };
 
     fetchData();
-  }, []);
+  }, [shouldRefetch, currentUser]);
 
   const handleNewChat = async (user: User) => {
     const newChat = {
@@ -98,7 +100,6 @@ export default function ChatInterface() {
       name: user.name,
       isGroup: false,
       participants: [currentUser, user],
-      messages: [],
       lastMessage: "",
       lastMessageTime: new Date().toISOString(),
     };
@@ -115,12 +116,18 @@ export default function ChatInterface() {
       console.error("Error creating chat:", response.error);
       return;
     }
-
+    if (response.status === 201) {
+      setShouldRefetch((prev) => !prev); // UI update
+    }
     // Update local state
-    const updatedChats = [...chats, newChat];
+    const updatedChats = chats.map((chat) => ({
+      ...chat,
+      messages: [],
+    }));
+
     setChats(updatedChats);
     setFilteredChats(updatedChats);
-    setActiveChat(newChat);
+    setActiveChat({ ...newChat, messages: [] }); //populated array of msgs
     setIsModalOpen(false);
   };
 
@@ -291,7 +298,9 @@ export default function ChatInterface() {
         )}
         <div className="flex items-center space-x-4">
           <div className="relative w-10 h-10 rounded-full bg-gray-300 overflow-hidden">
-            <img
+            <Image
+              width={500}
+              height={500}
               src={"/user-img.png"}
               alt="Profile"
               className="w-full h-full object-cover"
@@ -302,7 +311,7 @@ export default function ChatInterface() {
             <h1 className="text-lg font-semibold">{currentUser.name}</h1>
           </div>
         </div>
-        <div className="ml-auto flex space-x-4">
+        <div className="ml-auto items-center flex space-x-4">
           <button
             className="text-[#54656f]"
             onClick={toggleLabelFilter}
@@ -327,7 +336,7 @@ export default function ChatInterface() {
 
           <button
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-1 px-2 py-0.5 bg-[#128C7E] text-white rounded-lg hover:bg-[#0e6d62] transition-colors"
+            className="flex items-center px-1 py-0.5 md:px-2 md:py-2  bg-[#128C7E] text-white text-sm rounded-lg hover:bg-[#0e6d62] transition-colors"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"

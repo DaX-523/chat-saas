@@ -54,9 +54,11 @@ export const useRealtimeReadReceipts = (
 
           setChats(updatedChats);
           setFilteredChats(updatedChats);
-          setActiveChat(
-            updatedChats.find((chat) => chat.id === activeChat?.id) || null
-          );
+          if (activeChat && activeChat.id === updatedStatus.chatid) {
+            setActiveChat(
+              updatedChats.find((chat) => chat.id === activeChat?.id) || null
+            );
+          }
         }
       )
       .subscribe();
@@ -64,5 +66,5 @@ export const useRealtimeReadReceipts = (
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [chats, setChats, setFilteredChats]);
+  }, [chats, setChats, setFilteredChats, setActiveChat]);
 };

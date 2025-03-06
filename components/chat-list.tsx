@@ -8,6 +8,7 @@ import { formatTime } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { currentUser } from "@/lib/data";
 import { useAuth } from "@/context/auth-context";
+import Image from "next/image";
 
 interface ChatListProps {
   chats: Chat[];
@@ -134,7 +135,9 @@ export default function ChatList({
             aria-selected={activeChat?.id === chat.id}
           >
             <div className="w-12 h-12 rounded-full bg-gray-300 overflow-hidden mr-3 flex-shrink-0">
-              <img
+              <Image
+                width={500}
+                height={500}
                 src={chat.isGroup ? "/default-group.png" : "/user-img.png"}
                 alt={chat.name}
                 className="w-full h-full object-cover"

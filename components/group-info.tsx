@@ -1,4 +1,5 @@
 import type { Chat } from "@/lib/types";
+import Image from "next/image";
 
 interface GroupInfoProps {
   chat: Chat;
@@ -35,7 +36,9 @@ export default function GroupInfo({ chat, onClose }: GroupInfoProps) {
 
       <div className="p-4 flex flex-col items-center border-b border-gray-200">
         <div className="w-24 h-24 rounded-full bg-gray-300 overflow-hidden mb-4">
-          <img
+          <Image
+            width={500}
+            height={500}
             src={"/default-group.png"}
             alt={chat.name}
             className="w-full h-full object-cover"
@@ -80,7 +83,9 @@ export default function GroupInfo({ chat, onClose }: GroupInfoProps) {
             {chat.participants.map((participant) => (
               <li key={participant.id} className="flex items-center py-2">
                 <div className="w-10 h-10 rounded-full bg-gray-300 overflow-hidden mr-3">
-                  <img
+                  <Image
+                    width={500}
+                    height={500}
                     src={"/user-img.png"}
                     alt={participant.name}
                     className="w-full h-full object-cover"

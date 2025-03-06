@@ -23,6 +23,7 @@ export interface Message {
 export interface MessageStatus {
   messageid: string;
   userid: string;
+  chatid: string;
   status: "delivered" | "read";
   timestamp: string;
 }

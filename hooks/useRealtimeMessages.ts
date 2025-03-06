@@ -54,5 +54,5 @@ export const useRealtimeMessages = (
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [chats, setChats, setFilteredChats]);
+  }, [chats, setChats, setFilteredChats, setActiveChat]);
 };

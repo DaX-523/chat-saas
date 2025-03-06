@@ -1,6 +1,7 @@
 "use client";
 import { supabase } from "@/lib/supabase";
 import { User } from "@/lib/types";
+import Image from "next/image";
 import React, { useEffect, useRef, useState } from "react";
 
 interface NewChatModalProps {
@@ -17,15 +18,6 @@ const NewChatModal = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [users, setUsers] = useState<User[]>([]);
 
-  const handleClickOutside = (event: MouseEvent) => {
-    if (
-      dropdownRef.current &&
-      !dropdownRef.current.contains(event.target as Node)
-    ) {
-      setIsModalOpen(false);
-    }
-  };
-
   useEffect(() => {
     const fetchUsers = async () => {
       const { data, error } = await supabase
@@ -39,14 +31,22 @@ const NewChatModal = ({
       setUsers(data);
     };
     fetchUsers();
-  }, []);
+  }, [currentUser.id]);
 
   useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsModalOpen(false);
+      }
+    };
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [handleClickOutside]);
+  }, []);
   return (
     // fixed positioning (covers whole screen in DOM) thats why cant be used as ref for handle click outside
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -70,7 +70,9 @@ const NewChatModal = ({
               className="flex items-center gap-3 p-4 hover:bg-gray-50 cursor-pointer transition-colors"
             >
               <div className="relative">
-                <img
+                <Image
+                  width={500}
+                  height={500}
                   src={"/user-img.png"}
                   alt={user.name}
                   className="w-12 h-12 rounded-full"
