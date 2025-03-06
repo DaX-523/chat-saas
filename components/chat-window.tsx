@@ -208,13 +208,7 @@ export default function ChatWindow({
                                 status.status === "read"
                             )
                               ? "stroke-[#53bdeb]" // Blue ticks for read
-                              : message.message_status?.some(
-                                  (status) =>
-                                    status.userid !== currentUser.id &&
-                                    status.status === "delivered"
-                                )
-                              ? "stroke-gray-500" // Gray ticks for delivered
-                              : "stroke-gray-300" // Light gray for sent
+                              : "stroke-gray-500" // Gray ticks for delivered
                           }`}
                         >
                           <path d="m1 13 4 4L15 7" />

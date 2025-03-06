@@ -7,6 +7,7 @@ import type { Chat, Label } from "@/lib/types";
 import { formatTime } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { currentUser } from "@/lib/data";
+import { useAuth } from "@/context/auth-context";
 
 interface ChatListProps {
   chats: Chat[];
@@ -29,6 +30,14 @@ export default function ChatList({
   setChats,
   setFilteredChats,
 }: ChatListProps) {
+  const { authState } = useAuth();
+  const currentUser = authState.user || {
+    id: "user1",
+    name: "You",
+    avatar: "/placeholder.svg?height=48&width=48",
+    isOnline: true,
+    auth_id: "101",
+  };
   const [contextMenu, setContextMenu] = useState<{
     visible: boolean;
     x: number;

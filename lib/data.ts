@@ -71,7 +71,7 @@ export const users: User[] = [
 ];
 
 // Current user
-export const currentUser = users[5];
+export const currentUser = users[0];
 
 export const initialChats: Chat[] = [
   {

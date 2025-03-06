@@ -11,8 +11,12 @@ import { initialChats, allLabels } from "@/lib/data";
 import { currentUser } from "@/lib/data";
 import { supabase } from "@/lib/supabase";
 import useFetchChats from "@/hooks/useFetchChats";
+import { useRealtimeMessages } from "@/hooks/useRealtimeMessages";
+import UserProfileDropdown from "./user-profile-dropdown";
+import { useAuth } from "@/context/auth-context";
 
 export default function ChatInterface() {
+  const { authState, logout } = useAuth();
   const [chats, setChats] = useState<Chat[]>([]);
   const [filteredChats, setFilteredChats] = useState<Chat[]>([]);
   const [activeChat, setActiveChat] = useState<Chat | null>(null);
@@ -21,7 +25,13 @@ export default function ChatInterface() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLabels, setSelectedLabels] = useState<Label[]>([]);
   const [showLabelFilter, setShowLabelFilter] = useState(false);
-
+  const currentUser = authState.user || {
+    id: "user1",
+    name: "You",
+    avatar: "/placeholder.svg?height=48&width=48",
+    isOnline: true,
+    auth_id: "101",
+  };
   // Bonus implementations for the assignment (search and label filters)
   useEffect(() => {
     let result = chats;
@@ -43,6 +53,14 @@ export default function ChatInterface() {
 
     setFilteredChats(result);
   }, [chats, searchQuery, selectedLabels]);
+
+  useRealtimeMessages(
+    chats,
+    setChats,
+    setFilteredChats,
+    activeChat,
+    setActiveChat
+  );
 
   useEffect(() => {
     const fetchData = async () => {
@@ -113,6 +131,7 @@ export default function ChatInterface() {
 
       if (statusResponse.error) {
         console.error("Error creating message status:", statusResponse.error);
+        return;
       }
 
       const chatUpdateResponse = await supabase
@@ -123,22 +142,7 @@ export default function ChatInterface() {
       if (chatUpdateResponse.error) {
         console.error("Error updating chat:", chatUpdateResponse.error);
       }
-      const updatedChats = chats.map((chat) => {
-        if (chat.id === activeChat.id) {
-          return {
-            ...chat,
-            messages: [...chat.messages, response.data[0]],
-            lastMessage: content,
-            lastMessageTime: new Date().toISOString(),
-          };
-        }
-        return chat;
-      });
 
-      setChats(updatedChats);
-      setActiveChat(
-        updatedChats.find((chat) => chat.id === activeChat.id) || null
-      );
       setInputMessage("");
     }
   };
@@ -236,14 +240,17 @@ export default function ChatInterface() {
     <>
       <header className="h-16 bg-[#f0f2f5] flex items-center px-4 border-b border-gray-200">
         <div className="flex items-center space-x-4">
-          <div className="w-10 h-10 rounded-full bg-gray-300 overflow-hidden">
+          <div className="relative w-10 h-10 rounded-full bg-gray-300 overflow-hidden">
             <img
-              src={activeChat?.isGroup ? "default-group.png" : "/user-img.png"}
+              src={"/user-img.png"}
               alt="Profile"
               className="w-full h-full object-cover"
             />
+            <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
           </div>
-          <h1 className="text-lg font-semibold">Chats</h1>
+          <div>
+            <h1 className="text-lg font-semibold">{currentUser.name}</h1>
+          </div>
         </div>
         <div className="ml-auto flex space-x-4">
           <button
@@ -267,25 +274,7 @@ export default function ChatInterface() {
               <path d="M7 7h.01" />
             </svg>
           </button>
-          <button className="text-[#54656f]">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="lucide lucide-refresh-cw"
-            >
-              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-              <path d="M21 3v5h-5" />
-              <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-              <path d="M3 21v-5h5" />
-            </svg>
-          </button>
+
           <button className="text-[#54656f]">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -302,24 +291,7 @@ export default function ChatInterface() {
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
           </button>
-          <button className="text-[#54656f]">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="lucide lucide-more-vertical"
-            >
-              <circle cx="12" cy="12" r="1" />
-              <circle cx="12" cy="5" r="1" />
-              <circle cx="12" cy="19" r="1" />
-            </svg>
-          </button>
+          <UserProfileDropdown />
         </div>
       </header>
 
