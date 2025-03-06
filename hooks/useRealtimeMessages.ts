@@ -1,9 +1,9 @@
 import { useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import type { Chat, Message } from "@/lib/types";
-import { currentUser } from "@/lib/data";
+import type { Chat, Message, User } from "@/lib/types";
 
 export const useRealtimeMessages = (
+  currentUser: User,
   chats: Chat[],
   setChats: (chats: Chat[]) => void,
   setFilteredChats: (chats: Chat[]) => void,

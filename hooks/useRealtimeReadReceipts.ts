@@ -18,6 +18,10 @@ export const useRealtimeReadReceipts = (
         async (payload) => {
           const updatedStatus = payload.new as MessageStatus;
 
+          // if this is unreadable
+          // here chats have populated messages array and inside the messages array
+          // there is another array for messages_status thats why nested mapping (unoptimized)
+          // TODO: better optimal approach for handling this scenario
           const updatedChats = chats.map((chat) => {
             const updatedMessages = chat.messages.map((message) => {
               if (message.id === updatedStatus.messageid) {

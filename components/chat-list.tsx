@@ -143,7 +143,10 @@ export default function ChatList({
             <div className="flex-1 min-w-0">
               <div className="flex justify-between items-baseline">
                 <h3 className="text-base font-medium text-gray-900 truncate">
-                  {chat.name}
+                  {chat.isGroup
+                    ? chat.name
+                    : chat.participants.find((p) => p.id !== currentUser.id)
+                        ?.name || chat.name}
                   {chat.isGroup && (
                     <span className="ml-2 text-xs bg-[#25D366] text-white px-1.5 py-0.5 rounded-full">
                       Group

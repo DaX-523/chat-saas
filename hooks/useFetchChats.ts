@@ -1,7 +1,7 @@
-import { currentUser } from "@/lib/data";
 import { supabase } from "@/lib/supabase";
+import { User } from "@/lib/types";
 
-const useFetchChats = async () => {
+const useFetchChats = async (currentUser: User) => {
   // First fetch chats with basic info
   const chatsResponse = await supabase.from("chats").select();
 
@@ -11,6 +11,12 @@ const useFetchChats = async () => {
   }
 
   if (chatsResponse.data) {
+    const userChats = chatsResponse.data.filter((chat) =>
+      chat.participants.some(
+        (participant: User) => participant.id === currentUser.id
+      )
+    );
+    console.log(userChats);
     // Fetch messages for all chats in a single query using a join
     const messagesResponse = await supabase
       .from("messages")
@@ -23,7 +29,7 @@ const useFetchChats = async () => {
       )
       .in(
         "chatid",
-        chatsResponse.data.map((chat) => chat.id)
+        userChats.map((chat) => chat.id)
       );
 
     if (messagesResponse.error) {
@@ -33,7 +39,7 @@ const useFetchChats = async () => {
     console.log(messagesResponse.data);
 
     // Combine chats with their messages
-    const populatedChats = chatsResponse.data.map((chat) => {
+    const populatedChats = userChats.map((chat) => {
       const chatMessages =
         messagesResponse.data?.filter((msg) => msg.chatid === chat.id) || [];
       const unreadCount = chatMessages.filter(

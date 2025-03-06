@@ -6,15 +6,15 @@ import ChatWindow from "./chat-window";
 import GroupInfo from "./group-info";
 import ResponsiveLayout from "./responsive-layout";
 import LabelFilter from "./label-filter";
-import type { Chat, Message, Label } from "@/lib/types";
-import { initialChats, allLabels } from "@/lib/data";
-import { currentUser } from "@/lib/data";
+import type { Chat, Message, Label, User } from "@/lib/types";
+import { initialChats, allLabels, users } from "@/lib/data";
 import { supabase } from "@/lib/supabase";
 import useFetchChats from "@/hooks/useFetchChats";
 import { useRealtimeMessages } from "@/hooks/useRealtimeMessages";
 import UserProfileDropdown from "./user-profile-dropdown";
 import { useAuth } from "@/context/auth-context";
 import { useRealtimeReadReceipts } from "@/hooks/useRealtimeReadReceipts";
+import NewChatModal from "./new-chat-modal";
 
 export default function ChatInterface() {
   const { authState, logout } = useAuth();
@@ -26,6 +26,8 @@ export default function ChatInterface() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLabels, setSelectedLabels] = useState<Label[]>([]);
   const [showLabelFilter, setShowLabelFilter] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const currentUser = authState.user || {
     id: "user1",
     name: "You",
@@ -57,6 +59,7 @@ export default function ChatInterface() {
 
   // realtime feature of supabase
   useRealtimeMessages(
+    currentUser,
     chats,
     setChats,
     setFilteredChats,
@@ -75,7 +78,7 @@ export default function ChatInterface() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const populatedChats = await useFetchChats();
+        const populatedChats = await useFetchChats(currentUser);
         if (populatedChats) {
           setChats(populatedChats);
           setFilteredChats(populatedChats);
@@ -88,6 +91,38 @@ export default function ChatInterface() {
 
     fetchData();
   }, []);
+
+  const handleNewChat = async (user: User) => {
+    const newChat = {
+      id: Date.now().toString(),
+      name: user.name,
+      isGroup: false,
+      participants: [currentUser, user],
+      messages: [],
+      lastMessage: "",
+      lastMessageTime: new Date().toISOString(),
+    };
+
+    const response = await supabase
+      .from("chats")
+      .insert({
+        ...newChat,
+        participants: [currentUser, user], // JSONB column
+      })
+      .select();
+
+    if (response.error) {
+      console.error("Error creating chat:", response.error);
+      return;
+    }
+
+    // Update local state
+    const updatedChats = [...chats, newChat];
+    setChats(updatedChats);
+    setFilteredChats(updatedChats);
+    setActiveChat(newChat);
+    setIsModalOpen(false);
+  };
 
   const handleSendMessage = async (content: string) => {
     if (!content.trim() || !activeChat) return;
@@ -246,6 +281,14 @@ export default function ChatInterface() {
   const sidebarContent = (
     <>
       <header className="h-16 bg-[#f0f2f5] flex items-center px-4 border-b border-gray-200">
+        {/* Modal */}
+        {isModalOpen && (
+          <NewChatModal
+            setIsModalOpen={setIsModalOpen}
+            currentUser={currentUser}
+            onSelectUser={handleNewChat}
+          />
+        )}
         <div className="flex items-center space-x-4">
           <div className="relative w-10 h-10 rounded-full bg-gray-300 overflow-hidden">
             <img
@@ -282,21 +325,26 @@ export default function ChatInterface() {
             </svg>
           </button>
 
-          <button className="text-[#54656f]">
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-1 px-2 py-0.5 bg-[#128C7E] text-white rounded-lg hover:bg-[#0e6d62] transition-colors"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
+              width="20"
+              height="20"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="lucide lucide-message-square"
             >
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              <line x1="12" y1="8" x2="12" y2="16" />
+              <line x1="8" y1="12" x2="16" y2="12" />
             </svg>
+            New Chat
           </button>
           <UserProfileDropdown />
         </div>
