@@ -14,6 +14,7 @@ import useFetchChats from "@/hooks/useFetchChats";
 import { useRealtimeMessages } from "@/hooks/useRealtimeMessages";
 import UserProfileDropdown from "./user-profile-dropdown";
 import { useAuth } from "@/context/auth-context";
+import { useRealtimeReadReceipts } from "@/hooks/useRealtimeReadReceipts";
 
 export default function ChatInterface() {
   const { authState, logout } = useAuth();
@@ -54,6 +55,7 @@ export default function ChatInterface() {
     setFilteredChats(result);
   }, [chats, searchQuery, selectedLabels]);
 
+  // realtime feature of supabase
   useRealtimeMessages(
     chats,
     setChats,
@@ -62,6 +64,14 @@ export default function ChatInterface() {
     setActiveChat
   );
 
+  useRealtimeReadReceipts(
+    chats,
+    setChats,
+    setFilteredChats,
+    activeChat,
+    setActiveChat
+  );
+  // fetch all chats of an user
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -124,7 +134,7 @@ export default function ChatInterface() {
         updated_at: msgTime,
       }));
 
-      // Insert message status entries
+      // Insert message status entries for both sender and the receiver user for read receipts
       const statusResponse = await supabase
         .from("message_status")
         .insert(messageStatusEntries);
@@ -169,7 +179,6 @@ export default function ChatInterface() {
   };
 
   const addLabelToChat = async (chat: Chat, label: Label) => {
-    // console.log(chat, label);
     chat.labels?.push(label);
     const updatedLabels = chat?.labels?.map((label) => label.name);
     const response = await supabase
@@ -182,7 +191,6 @@ export default function ChatInterface() {
       console.error("Error adding label");
       return;
     }
-    // console.log(response);
     if (response.status === 204) {
       const updatedChats = chats.map((c) => {
         if (c.id === chat.id) {
@@ -205,7 +213,6 @@ export default function ChatInterface() {
     const labelToRemove = allLabels.find((l) => l.id === labelId)?.name;
     if (!labelToRemove) return;
 
-    // Update the database using array_remove
     const updatedLabels = (chat.labels?.map((l) => l.name) || []).filter(
       (name) => name !== labelToRemove
     );

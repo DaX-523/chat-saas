@@ -42,9 +42,11 @@ export const useRealtimeMessages = (
           setChats(updatedChats);
           setFilteredChats(updatedChats);
 
-          setActiveChat(
-            updatedChats.find((chat) => chat.id === activeChat?.id) || null
-          );
+          if (activeChat && activeChat.id === newMessage.chatid) {
+            setActiveChat(
+              updatedChats.find((chat) => chat.id === activeChat.id) || null
+            );
+          }
         }
       )
       .subscribe();
