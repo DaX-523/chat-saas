@@ -18,6 +18,7 @@ export interface Message {
   sender: User;
   timestamp: string;
   message_status?: MessageStatus[];
+  replyId: string | undefined;
 }
 
 export interface MessageStatus {

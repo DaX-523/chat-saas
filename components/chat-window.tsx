@@ -2,16 +2,22 @@
 
 import type React from "react";
 
-import type { Chat, User } from "@/lib/types";
+import type { Chat, User, Message } from "@/lib/types";
 import { formatTime } from "@/lib/utils";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import Image from "next/image";
 
 interface ChatWindowProps {
   chat: Chat;
   inputMessage: string;
   setInputMessage: (message: string) => void;
-  onSendMessage: (content: string) => void;
+  onSendMessage: ({
+    content,
+    replyId,
+  }: {
+    content: string;
+    replyId: string | undefined;
+  }) => void;
   onToggleGroupInfo: () => void;
   currentUser: User;
 }
@@ -25,6 +31,11 @@ export default function ChatWindow({
   currentUser,
 }: ChatWindowProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [replyingTo, setReplyingTo] = useState<{
+    id: string;
+    content: string;
+    sender: User;
+  } | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -33,7 +44,19 @@ export default function ChatWindow({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      onSendMessage(inputMessage);
+      handleSendMessage();
+    }
+  };
+
+  const handleSendMessage = () => {
+    if (inputMessage.trim()) {
+      // Pass the replyingTo information along with the message content
+      // const messageData = replyingTo
+      //   ? { content: inputMessage, replyId: replyingTo.id }
+      //   : inputMessage;
+
+      onSendMessage({ content: inputMessage, replyId: replyingTo?.id });
+      setReplyingTo(null);
     }
   };
 
@@ -177,50 +200,84 @@ export default function ChatWindow({
                 {group.map((message, messageIndex) => (
                   <div
                     key={message.id}
-                    className={`rounded-lg px-3 py-2 mb-1 ${
-                      message.sender.id === currentUser.id
-                        ? "bg-[#d9fdd3] text-black"
-                        : "bg-white text-black"
-                    } ${
-                      messageIndex === 0
-                        ? message.sender.id === currentUser.id
-                          ? "rounded-tr-none"
-                          : "rounded-tl-none"
-                        : ""
-                    }`}
+                    className="flex gap-2 flex-row-reverse items-center"
                   >
-                    <p className="text-sm">{message.content}</p>
-                    <div className="flex items-center justify-end gap-1 mt-1">
-                      <time
-                        className="text-[10px] text-gray-500"
-                        dateTime={message.timestamp}
-                      >
-                        {formatTime(message.timestamp)}
-                      </time>
-                      {message.sender.id === currentUser.id && (
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className={`${
-                            message.message_status?.some(
-                              (status) =>
-                                status.userid !== currentUser.id &&
-                                status.status === "read"
-                            )
-                              ? "stroke-[#53bdeb]" // Blue ticks for read
-                              : "stroke-gray-500" // Gray ticks for delivered
-                          }`}
-                        >
-                          <path d="m1 13 4 4L15 7" />
-                          <path d="m8 13 4 4L22 7" />
-                        </svg>
+                    <span
+                      className="text-xs text-gray-400 cursor-pointer hover:text-gray-600"
+                      onClick={() =>
+                        setReplyingTo({
+                          id: message.id,
+                          content: message.content,
+                          sender: message.sender,
+                        })
+                      }
+                    >
+                      reply
+                    </span>
+                    <div
+                      className={`rounded-lg px-3 py-2 mb-1 ${
+                        message.sender.id === currentUser.id
+                          ? "bg-[#d9fdd3] text-black"
+                          : "bg-white text-black"
+                      } ${
+                        messageIndex === 0
+                          ? message.sender.id === currentUser.id
+                            ? "rounded-tr-none"
+                            : "rounded-tl-none"
+                          : ""
+                      }`}
+                    >
+                      {message.replyId && (
+                        <div className="mb-1 p-1 bg-gray-100 rounded border-l-2 border-[#128C7E] text-xs">
+                          <div className="text-gray-600 truncate">
+                            {
+                              chat.messages.find(
+                                (msg) => msg.id === message.replyId
+                              )?.sender.name
+                            }
+                          </div>
+                          <div className="">
+                            {
+                              chat.messages.find(
+                                (msg) => msg.id === message.replyId
+                              )?.content
+                            }
+                          </div>
+                        </div>
                       )}
+                      <p className="text-sm">{message.content}</p>
+                      <div className="flex items-center justify-end gap-1 mt-1">
+                        <time
+                          className="text-[10px] text-gray-500"
+                          dateTime={message.timestamp}
+                        >
+                          {formatTime(message.timestamp)}
+                        </time>
+                        {message.sender.id === currentUser.id && (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className={`${
+                              message.message_status?.some(
+                                (status) =>
+                                  status.userid !== currentUser.id &&
+                                  status.status === "read"
+                              )
+                                ? "stroke-[#53bdeb]" // Blue ticks for read
+                                : "stroke-gray-500" // Gray ticks for delivered
+                            }`}
+                          >
+                            <path d="m1 13 4 4L15 7" />
+                            <path d="m8 13 4 4L22 7" />
+                          </svg>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -231,74 +288,110 @@ export default function ChatWindow({
         <div ref={messagesEndRef} />
       </section>
 
-      <footer className="h-16 bg-[#f0f2f5] flex items-center px-4 py-2">
-        <button className="text-[#54656f] mx-2" aria-label="Insert emoji">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="lucide lucide-smile"
+      <footer className="bg-[#f0f2f5]">
+        {replyingTo && (
+          <div className="px-4 py-2 bg-white border-t border-l border-r border-gray-200 rounded-t-lg mx-2 mt-2 flex items-start">
+            <div className="flex-1">
+              <div className="flex items-center">
+                <span className="text-xs font-medium text-[#128C7E]">
+                  Replying to {replyingTo.sender.name}
+                </span>
+              </div>
+              <p className="text-sm text-gray-600 truncate">
+                {replyingTo.content}
+              </p>
+            </div>
+            <button
+              className="text-gray-400 hover:text-gray-600"
+              onClick={() => setReplyingTo(null)}
+              aria-label="Cancel reply"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        )}
+        <div className="h-16 flex items-center px-4 py-2">
+          <button className="text-[#54656f] mx-2" aria-label="Insert emoji">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="lucide lucide-smile"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+              <line x1="9" x2="9.01" y1="9" y2="9" />
+              <line x1="15" x2="15.01" y1="9" y2="9" />
+            </svg>
+          </button>
+          <button className="text-[#54656f] mx-2" aria-label="Attach file">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="lucide lucide-paperclip"
+            >
+              <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+            </svg>
+          </button>
+          <div className="flex-1 mx-2">
+            <input
+              type="text"
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={replyingTo ? "Type your reply..." : "Type a message"}
+              className="w-full px-4 py-2 rounded-full focus:outline-none"
+              aria-label="Message input"
+            />
+          </div>
+          <button
+            className="text-[#54656f] mx-2"
+            onClick={handleSendMessage}
+            aria-label="Send message"
           >
-            <circle cx="12" cy="12" r="10" />
-            <path d="M8 14s1.5 2 4 2 4-2 4-2" />
-            <line x1="9" x2="9.01" y1="9" y2="9" />
-            <line x1="15" x2="15.01" y1="9" y2="9" />
-          </svg>
-        </button>
-        <button className="text-[#54656f] mx-2" aria-label="Attach file">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="lucide lucide-paperclip"
-          >
-            <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-          </svg>
-        </button>
-        <div className="flex-1 mx-2">
-          <input
-            type="text"
-            value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type a message"
-            className="w-full px-4 py-2 rounded-full focus:outline-none"
-            aria-label="Message input"
-          />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="lucide lucide-send"
+            >
+              <path d="m22 2-7 20-4-9-9-4Z" />
+              <path d="M22 2 11 13" />
+            </svg>
+          </button>
         </div>
-        <button
-          className="text-[#54656f] mx-2"
-          onClick={() => onSendMessage(inputMessage)}
-          aria-label="Send message"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="lucide lucide-send"
-          >
-            <path d="m22 2-7 20-4-9-9-4Z" />
-            <path d="M22 2 11 13" />
-          </svg>
-        </button>
       </footer>
     </>
   );

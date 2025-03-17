@@ -116,9 +116,15 @@ export default function ChatInterface() {
     }
   };
 
-  const handleSendMessage = async (content: string) => {
-    if (!content.trim() || !activeChat) return;
-    await sendMessage(content, currentUser, activeChat);
+  const handleSendMessage = async ({
+    content,
+    replyId,
+  }: {
+    content: string;
+    replyId: string | undefined;
+  }) => {
+    if (!content || !activeChat) return;
+    await sendMessage(content.toString(), currentUser, activeChat, replyId);
     setInputMessage("");
   };
 

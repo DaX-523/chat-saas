@@ -4,7 +4,8 @@ import { Chat, Message, User } from "@/lib/types";
 export const sendMessage = async (
   content: string,
   currentUser: User,
-  activeChat: Chat
+  activeChat: Chat,
+  replyId: string | undefined
 ) => {
   const msgTime = new Date()
     .toLocaleString("en-US", {
@@ -23,6 +24,7 @@ export const sendMessage = async (
     sender: currentUser,
     timestamp: msgTime,
     chatid: activeChat.id,
+    replyId: replyId ? replyId : undefined,
   };
 
   const response = await supabase.from("messages").insert(newMessage).select();
