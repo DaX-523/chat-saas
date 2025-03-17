@@ -19,6 +19,9 @@ import { createNewChat } from "@/services/newChat";
 import { sendMessage } from "@/services/sendMessage";
 import { addLabel } from "@/services/addLabel";
 import { removeLabel } from "@/services/removeLabel";
+import { updateMessage } from "@/services/updateMessage";
+import { useRealtimeUpdatedMessages } from "@/hooks/useRealtimeUpdateMsg";
+import { deleteMessage } from "@/services/deleteMessage";
 
 export default function ChatInterface() {
   const { authState } = useAuth();
@@ -26,6 +29,7 @@ export default function ChatInterface() {
   const [filteredChats, setFilteredChats] = useState<Chat[]>([]);
   const [activeChat, setActiveChat] = useState<Chat | null>(null);
   const [inputMessage, setInputMessage] = useState("");
+  const [editMessage, setEditMessage] = useState("");
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLabels, setSelectedLabels] = useState<Label[]>([]);
@@ -84,6 +88,14 @@ export default function ChatInterface() {
     activeChat,
     setActiveChat
   );
+
+  useRealtimeUpdatedMessages(
+    chats,
+    setChats,
+    setFilteredChats,
+    setActiveChat,
+    activeChat
+  );
   // fetch all chats of an user
   useEffect(() => {
     const fetchData = async () => {
@@ -125,7 +137,17 @@ export default function ChatInterface() {
   }) => {
     if (!content || !activeChat) return;
     await sendMessage(content.toString(), currentUser, activeChat, replyId);
-    setInputMessage("");
+  };
+
+  const handleEditMessage = async (content: string, messageId: string) => {
+    if (!content.trim() || !activeChat) return;
+    setEditMessage("");
+    await updateMessage(content, activeChat, messageId);
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!activeChat) return;
+    await deleteMessage(messageId);
   };
 
   const toggleGroupInfo = () => {
@@ -365,6 +387,10 @@ export default function ChatInterface() {
       onSendMessage={handleSendMessage}
       onToggleGroupInfo={toggleGroupInfo}
       currentUser={currentUser}
+      editMessage={editMessage}
+      setEditMessage={setEditMessage}
+      onEditMessage={handleEditMessage}
+      onDeleteMessage={handleDeleteMessage}
     />
   ) : (
     <section className="flex-1 flex items-center justify-center bg-[#f0f2f5]">

@@ -19,6 +19,8 @@ export interface Message {
   timestamp: string;
   message_status?: MessageStatus[];
   replyId: string | undefined;
+  isEdited: boolean;
+  isDeleted: boolean;
 }
 
 export interface MessageStatus {

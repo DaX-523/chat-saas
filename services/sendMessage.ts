@@ -25,6 +25,8 @@ export const sendMessage = async (
     timestamp: msgTime,
     chatid: activeChat.id,
     replyId: replyId ? replyId : undefined,
+    isEdited: false,
+    isDeleted: false,
   };
 
   const response = await supabase.from("messages").insert(newMessage).select();
