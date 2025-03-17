@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import type { Chat, User, Message } from "@/lib/types";
+import type { Chat, User } from "@/lib/types";
 import { formatTime } from "@/lib/utils";
 import { useRef, useEffect, useState } from "react";
 import Image from "next/image";
