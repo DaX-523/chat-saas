@@ -30,7 +30,8 @@ const fetchChats = async (currentUser: User) => {
       .in(
         "chatid",
         userChats.map((chat) => chat.id)
-      );
+      )
+      .order("timestamp", { ascending: true });
 
     if (messagesResponse.error) {
       console.error("Error fetching messages:", messagesResponse.error);

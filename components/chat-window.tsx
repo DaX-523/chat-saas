@@ -4,16 +4,22 @@ import type React from "react";
 
 import type { Chat, User } from "@/lib/types";
 import { formatTime } from "@/lib/utils";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import Image from "next/image";
+import EditMessageModal from "./edit-message-modal";
+import DeleteMessageModal from "./delete-message-modal";
 
 interface ChatWindowProps {
   chat: Chat;
   inputMessage: string;
   setInputMessage: (message: string) => void;
   onSendMessage: (content: string) => void;
+  onEditMessage: (content: string, messageId: string) => void;
+  onDeleteMessage: (messageId: string) => void;
   onToggleGroupInfo: () => void;
   currentUser: User;
+  editMessage: string;
+  setEditMessage: (messageId: string) => void;
 }
 
 export default function ChatWindow({
@@ -21,11 +27,16 @@ export default function ChatWindow({
   inputMessage,
   setInputMessage,
   onSendMessage,
+  onEditMessage,
   onToggleGroupInfo,
+  onDeleteMessage,
   currentUser,
 }: ChatWindowProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [messageToEdit, setMessageToEdit] = useState({ id: "", content: "" });
+  const [messageToDelete, setMessageToDelete] = useState("");
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chat.messages]);
@@ -50,6 +61,23 @@ export default function ChatWindow({
   return (
     <>
       <header className="h-16 bg-[#f0f2f5] flex items-center px-4 border-b border-gray-200">
+        {isEditing && (
+          <EditMessageModal
+            isOpen={isEditing}
+            onSave={(newUpdatedMessage) =>
+              onEditMessage(newUpdatedMessage, messageToEdit.id)
+            }
+            onClose={() => setIsEditing(false)}
+            initialMessage={messageToEdit.content}
+          />
+        )}
+        {isDeleting && (
+          <DeleteMessageModal
+            isOpen={isDeleting}
+            onClose={() => setIsDeleting(false)}
+            onDelete={() => onDeleteMessage(messageToDelete)}
+          />
+        )}
         <div className="flex items-center">
           <div className="w-10 h-10 rounded-full bg-gray-300 overflow-hidden mr-3">
             <Image
@@ -165,6 +193,7 @@ export default function ChatWindow({
                   />
                 </div>
               )}
+
               <div className="max-w-[70%]">
                 {chat.isGroup && group[0].sender.id !== currentUser.id && (
                   <div
@@ -177,51 +206,134 @@ export default function ChatWindow({
                 {group.map((message, messageIndex) => (
                   <div
                     key={message.id}
-                    className={`rounded-lg px-3 py-2 mb-1 ${
-                      message.sender.id === currentUser.id
-                        ? "bg-[#d9fdd3] text-black"
-                        : "bg-white text-black"
-                    } ${
-                      messageIndex === 0
-                        ? message.sender.id === currentUser.id
-                          ? "rounded-tr-none"
-                          : "rounded-tl-none"
-                        : ""
+                    className={`flex gap-2 w-full ${
+                      message.sender.id !== currentUser.id
+                        ? "flex-row-reverse"
+                        : "flex-row"
                     }`}
                   >
-                    <p className="text-sm">{message.content}</p>
-                    <div className="flex items-center justify-end gap-1 mt-1">
-                      <time
-                        className="text-[10px] text-gray-500"
-                        dateTime={message.timestamp}
-                      >
-                        {formatTime(message.timestamp)}
-                      </time>
-                      {message.sender.id === currentUser.id && (
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className={`${
-                            message.message_status?.some(
-                              (status) =>
-                                status.userid !== currentUser.id &&
-                                status.status === "read"
-                            )
-                              ? "stroke-[#53bdeb]" // Blue ticks for read
-                              : "stroke-gray-500" // Gray ticks for delivered
+                    {!message.isDeleted ? (
+                      <div className="flex">
+                        <div className="flex items-center justify-center gap-2 flex-col">
+                          {message.sender.id === currentUser.id && (
+                            <button
+                              className="cursor-pointer p-1 rounded-full hover:bg-gray-200 transition-colors"
+                              onClick={() => {
+                                setIsEditing(true);
+                                setMessageToEdit({
+                                  id: message.id,
+                                  content: message.content,
+                                });
+                              }}
+                              aria-label="Edit message"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="12"
+                                height="12"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="text-gray-500"
+                              >
+                                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                                <path d="m15 5 4 4" />
+                              </svg>
+                            </button>
+                          )}
+                          <button
+                            className="cursor-pointer p-1 rounded-full hover:bg-gray-200 transition-colors"
+                            onClick={() => {
+                              setIsDeleting(true);
+                              setMessageToDelete(message.id);
+                            }}
+                            aria-label="Delete message"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="12"
+                              height="12"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="text-gray-500"
+                            >
+                              <path d="M3 6h18" />
+                              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                            </svg>
+                          </button>
+                        </div>
+                        <div
+                          className={`rounded-lg px-3 py-2 mb-1 ${
+                            message.sender.id === currentUser.id
+                              ? "bg-[#d9fdd3] text-black"
+                              : "bg-white text-black"
+                          } ${
+                            messageIndex === 0
+                              ? message.sender.id === currentUser.id
+                                ? "rounded-tr-none"
+                                : "rounded-tl-none"
+                              : ""
                           }`}
                         >
-                          <path d="m1 13 4 4L15 7" />
-                          <path d="m8 13 4 4L22 7" />
-                        </svg>
-                      )}
-                    </div>
+                          <p className="text-sm">{message.content}</p>
+                          <div className="flex items-center justify-end gap-1 mt-1">
+                            {message.isEdited && (
+                              <span className="text-[8px] text-gray-400">
+                                edited
+                              </span>
+                            )}
+                            <time
+                              className="text-[10px] text-gray-500"
+                              dateTime={message.timestamp}
+                            >
+                              {formatTime(message.timestamp)}
+                            </time>
+                            {message.sender.id === currentUser.id && (
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className={`${
+                                  message.message_status?.some(
+                                    (status) =>
+                                      status.userid !== currentUser.id &&
+                                      status.status === "read"
+                                  )
+                                    ? "stroke-[#53bdeb]" // Blue ticks for read
+                                    : "stroke-gray-500" // Gray ticks for delivered
+                                }`}
+                              >
+                                <path d="m1 13 4 4L15 7" />
+                                <path d="m8 13 4 4L22 7" />
+                              </svg>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        className={`rounded-lg px-3 py-2 mb-1 ${
+                          message.sender.id !== currentUser.id
+                            ? "bg-gray-100"
+                            : "bg-[#d9fdd3]"
+                        } text-gray-500 italic text-sm`}
+                      >
+                        This message was deleted
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -271,7 +383,9 @@ export default function ChatWindow({
           <input
             type="text"
             value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
+            onChange={(e) => {
+              setInputMessage(e.target.value);
+            }}
             onKeyDown={handleKeyDown}
             placeholder="Type a message"
             className="w-full px-4 py-2 rounded-full focus:outline-none"
@@ -280,7 +394,9 @@ export default function ChatWindow({
         </div>
         <button
           className="text-[#54656f] mx-2"
-          onClick={() => onSendMessage(inputMessage)}
+          onClick={() => {
+            onSendMessage(inputMessage);
+          }}
           aria-label="Send message"
         >
           <svg

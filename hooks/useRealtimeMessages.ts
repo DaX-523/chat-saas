@@ -15,10 +15,9 @@ export const useRealtimeMessages = (
       .channel("realtime:messages")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "messages" },
+        { event: "INSERT", schema: "public", table: "messages" },
         async (payload) => {
           const newMessage = payload.new as Message;
-          // console.log(payload);
           // Find the chat this message belongs to
           const updatedChats = chats.map((chat) => {
             if (chat.id === newMessage.chatid) {
@@ -38,7 +37,6 @@ export const useRealtimeMessages = (
             }
             return chat;
           });
-
           setChats(updatedChats);
           setFilteredChats(updatedChats);
 

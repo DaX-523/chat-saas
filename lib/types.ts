@@ -18,6 +18,8 @@ export interface Message {
   sender: User;
   timestamp: string;
   message_status?: MessageStatus[];
+  isEdited: boolean;
+  isDeleted: boolean;
 }
 
 export interface MessageStatus {
